@@ -1,62 +1,58 @@
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class PlayerManager : MonoBehaviour
 {
+    //Movement
    [SerializeField] protected private PlayerInput playerInput;
    [SerializeField]protected float f_speed = 5f;
+    //Animations
    [SerializeField]protected private Animator animator;
    private SpriteRenderer spriteRenderer;
    private bool b_moving;
 
     //Physics 
-    public float f_gravityScale = -25f;
-    public float f_fallMultiplier = 2.5f;
-    public float f_jumpForce = 12f;
-    public bool b_isGrounded = false;
-    //private CharacterController controller;
-    LayerMask layerMask;
-
-    private void Awake()
-    {
-        playerInput = GetComponent<PlayerInput>();
-        animator = GetComponent<Animator>();
-        spriteRenderer = GetComponent<SpriteRenderer>();
-        layerMask = LayerMask.GetMask("Floor","Player");
-    }
+    [SerializeField]float f_jumpHeight = 5f;
+    [SerializeField] float f_gravityScale = 5f;
+    float velocity;
+    [SerializeField] float floorHeight = 0.5f;
+    [SerializeField] Transform feet;
+    [SerializeField] ContactFilter2D contactFilter;
+    [SerializeField] bool isGrounded;
+    [SerializeField] Collider2D[] results = new Collider2D[1];
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        
+      
     }
-    private void FixedUpdate()
-    {
-        RaycastHit hit;
-        // Does the ray intersect any objects excluding the player layer
-        if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.down), out hit, Mathf.Infinity, layerMask))
-
-        {
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.down) * hit.distance, Color.yellow);
-            Debug.Log("Did Hit");
-        }
-        else
-        {
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 10000, Color.red);
-            Debug.Log("Did not Hit");
-        }
-    }
-
-
-
-
+  
 
     // Update is called once per frame
     void Update()
     {
-      
+        #region Jumping and Gravity
+        velocity += Physics2D.gravity.y * f_gravityScale * Time.deltaTime;
 
+        if(Physics2D.OverlapBox(feet.position, feet.localScale, 0, contactFilter, results) > 0 && velocity<0)
+        {
+            velocity = 0;
+            Vector2 surface = Physics2D.ClosestPoint(transform.position, results[0])+Vector2.up*floorHeight;
+            transform.position = new Vector3(transform.position.x, surface.y, transform.position.z);
+            isGrounded = true;
+        }
+        else
+        {
+            isGrounded = false;
+        }   
 
+        if(playerInput.actions["Jump"].WasPressedThisFrame() && isGrounded)
+        {
+            velocity += Mathf.Sqrt(f_jumpHeight * -2f * (Physics2D.gravity.y*f_gravityScale));
+        }
+        transform.Translate(new Vector3(0, velocity,0) * Time.deltaTime);
+        #endregion
         #region Player Movement
         float moveInput = playerInput.actions["Move"].ReadValue<float>();
         transform.position += Vector3.right * moveInput * f_speed * Time.deltaTime;
@@ -68,8 +64,10 @@ public class PlayerManager : MonoBehaviour
 
 
         #endregion
-
         #region Animation
+        /*
+      
+        
         animator.SetBool("Moving", b_moving);
         if (moveInput < 0)
         {
@@ -88,6 +86,8 @@ public class PlayerManager : MonoBehaviour
         {
             b_moving = false;
         }
+       
+        */
         #endregion
     }
 }
